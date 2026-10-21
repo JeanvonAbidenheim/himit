@@ -1,0 +1,12 @@
+import {auth,db,esc} from "/assets/js/app.js";
+import {doc,getDoc,updateDoc,addDoc,collection,query,where,getDocs,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const $=s=>document.querySelector(s),say=(f,t,k)=>{const m=f.querySelector(".msg");m.textContent=t;m.className="msg "+k};
+const list=(el,a,fn)=>el.innerHTML=a.length?'<div class="list">'+a.map(fn).join("")+"</div>":'<div class="empty">Belum ada data.</div>';
+auth.authStateReady().then(async()=>{const u=auth.currentUser;if(!u)return;const ref=doc(db,"pengguna",u.uid),p=(await getDoc(ref)).data()||{},f=$("#prof");
+ f.nama.value=p.nama||"";f.bio.value=p.bio||"";f.tampilNama.checked=!!p.tampilNama;f.tampilEmail.checked=!!p.tampilEmail;
+ f.onsubmit=async e=>{e.preventDefault();try{await updateDoc(ref,{nama:f.nama.value,bio:f.bio.value,tampilNama:f.tampilNama.checked,tampilEmail:f.tampilEmail.checked});say(f,"Profil disimpan.","ok")}catch{say(f,"Gagal menyimpan profil.","err")}};
+ $("#apply").onsubmit=async e=>{e.preventDefault();const a=e.target;if(!u.emailVerified)return say(a,"Verifikasi email Anda terlebih dahulu.","err");
+  try{await addDoc(collection(db,"membershipApplications"),{uid:u.uid,catatan:a.catatan.value,status:"pending",dibuat:serverTimestamp()});a.reset();say(a,"Permohonan terkirim. Status: pending.","ok")}catch{say(a,"Gagal mengirim permohonan.","err")}};
+ try{const g=async c=>(await getDocs(query(collection(db,c),where("uid","==",u.uid)))).docs.map(d=>d.data());
+  list($("#regs"),await g("pendaftaran"),x=>`<article class="item"><time>${esc(x.status)}</time><div><h3>${esc(x.judul)}</h3></div></article>`);
+  list($("#notif"),await g("notifikasi"),x=>`<article class="item"><time>Baru</time><div><h3>${esc(x.judul)}</h3><p>${esc(x.ringkasan||"")}</p></div></article>`)}catch{}});

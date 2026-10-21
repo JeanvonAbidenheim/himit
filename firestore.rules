@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn(){ return request.auth != null; }
+    function role(){ return signedIn() && 'role' in request.auth.token ? request.auth.token.role : ''; }
+    function isAdmin(){ return role() in ['admin','direktur_perhubungan']; }
+    function verified(){ return signedIn() && request.auth.token.email_verified == true; }
+    function member(){ return verified() && (role() == 'anggota_terverifikasi' || isAdmin()); }
+    function isPub(){ return resource.data.status in ['published','aktif','berjalan','selesai','dibuka']; }
+
+    // Konten publik: baca hanya jika terbit, tulis hanya admin. Pengunjung tidak dapat membaca draft.
+    match /{col}/{id} {
+      allow read: if col in ['halaman','navigasi','divisi','jabatan','periodeKabinet','proker','acara','pengumuman','artikel','projek','pencapaian','albumFoto','resources','siteSettings'] && (isPub() || isAdmin());
+      allow write: if col in ['halaman','navigasi','divisi','jabatan','periodeKabinet','proker','acara','pengumuman','artikel','projek','pencapaian','albumFoto','resources','siteSettings'] && isAdmin();
+    }
+    // Pengumuman internal untuk anggota diberi field audience == 'anggota'; pembatasan tambahan lewat query.
+    match /pengguna/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nama','email','statusAkun','statusKeanggotaan','dibuat'])
+        && request.resource.data.statusAkun == 'pendaftar' && request.resource.data.statusKeanggotaan == 'none';
+      allow update: if signedIn() && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['statusAkun','statusKeanggotaan','role','email']);
+      allow update, delete: if isAdmin();
+    }
+    match /pendaftaran/{id} { allow create: if verified() && request.resource.data.uid == request.auth.uid; allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin()); allow update, delete: if isAdmin(); }
+    match /membershipApplications/{id} { allow create: if verified() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending'; allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin()); allow update, delete: if isAdmin(); }
+    match /notifikasi/{id} { allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin()); allow write: if isAdmin(); }
+    match /newsletterSubscribers/{id} { allow create: if request.resource.data.keys().hasOnly(['email','dibuat']) && request.resource.data.email is string; allow read, update, delete: if isAdmin(); }
+    match /collaborationRequests/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['nama','email','jenis','pesan','status','dibuat'])
+        && request.resource.data.status == 'baru' && request.resource.data.pesan.size() <= 2000 && request.resource.data.nama.size() <= 100;
+      allow read, update, delete: if isAdmin();
+    }
+    // Hanya Cloud Functions (Admin SDK) atau admin yang menyentuh log dan analitik.
+    match /{col}/{id} { allow read: if col in ['emailLogs','auditLogs','analyticsSummaries'] && isAdmin(); allow create: if col == 'auditLogs' && isAdmin() && request.resource.data.actor == request.auth.uid; allow update, delete: if false; }
+  }
+}
