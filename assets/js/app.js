@@ -2,7 +2,16 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,query,where,orderBy,limit,getDocs,doc,getDoc,setDoc,addDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-const firebaseConfig={apiKey:"ISI_API_KEY",authDomain:"ISI.firebaseapp.com",projectId:"ISI_PROJECT_ID",appId:"ISI_APP_ID"};
+const firebaseConfig={// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCl0SJ3v8a3tuJeClml0JMu5HfvdYGLywA",
+  authDomain: "himit-6ea94.firebaseapp.com",
+  projectId: "himit-6ea94",
+  storageBucket: "himit-6ea94.firebasestorage.app",
+  messagingSenderId: "676467965463",
+  appId: "1:676467965463:web:4836501a7718d96d3e2652",
+  measurementId: "G-D1TXLTZYSB"
+};
 const configured=!firebaseConfig.apiKey.startsWith("ISI");
 let auth,db;if(configured){const a=initializeApp(firebaseConfig);auth=getAuth(a);db=getFirestore(a)}
 const $=(s,r=document)=>r.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
